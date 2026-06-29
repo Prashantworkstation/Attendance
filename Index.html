@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employee Attendance Portal</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --success: #22c55e;
+            --danger: #ef4444;
+            --background: #f8fafc;
+            --surface: #ffffff;
+            --text: #1e293b;
+            --border: #cbd5e1;
+            --info: #0ea5e9;
+            --warning: #f59e0b;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--background);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        /* Navigation Tabs */
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 10px;
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            padding: 10px 20px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            color: #64748b;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+
+        .tab-btn:hover {
+            background-color: #e2e8f0;
+            color: var(--text);
+        }
+
+        .tab-btn.active {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Common Card Style */
+        .card {
+            background: var(--surface);
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        /* 2-COLUMN GRID SYSTEM */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 420px 1fr;
+            gap: 20px;
+            align-items: start;
+        }
+
+        @media (max-width: 850px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Side-by-Side Framework Boxes */
+        .employee-management-box {
+            border: 2px solid #64748b;
+            border-radius: 12px;
+            padding: 20px;
+            background: #ffffff;
+        }
+
+        .attendance-box {
+            border: 2px solid var(--primary);
+            border-radius: 12px;
+            padding: 20px;
+            background: linear-gradient(to bottom, #ffffff, #fcfcff);
+        }
+
+        /* Scrolling Feature Configuration */
+        .scrollable-roster-container {
+            max-height: 180px;
+            overflow-y: auto;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            margin-top: 10px;
+            background: #ffffff;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+            background: #f8fafc;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .input-inline-group {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        label {
+            display: block;
+            font-weight: 700;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+            color: #334155;
+        }
+
+        select, input[type="month"], input[type="date"], input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background-color: white;
+            font-size: 0.95rem;
+            box-sizing: border-box;
+            color: var(--text);
+        }
+
+        /* Radio Tiles Layout */
+        .radio-tile-group {
+            display: flex;
+            gap: 12px;
+        }
+
+        .radio-tile {
+            flex: 1;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 12px;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            background: white;
+            font-size: 0.95rem;
+            transition: all 0.2s;
+        }
+
+        .radio-tile input {
+            position: absolute;
+            opacity: 0;
+        }
+
+        .radio-tile-type:hover { border-color: var(--primary); color: var(--primary); }
+        .radio-tile-type input:checked + span { color: var(--primary); }
+        .radio-tile-type:has(input:checked) { border-color: var(--primary); background-color: #e0e7ff; }
+
+        .radio-tile-p:hover { border-color: var(--success); color: var(--success); }
+        .radio-tile-p input:checked + span { color: var(--success); }
+        .radio-tile-p:has(input:checked) { border-color: var(--success); background-color: #f0fdf4; }
+
+        .radio-tile-a:hover { border-color: var(--danger); color: var(--danger); }
+        .radio-tile-a input:checked + span { color: var(--danger); }
+        .radio-tile-a:has(input:checked) { border-color: var(--danger); background-color: #fef2f2; }
+
+        .btn {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 18px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn:hover { background-color: var(--primary-hover); }
+        .btn-success { background-color: var(--success); }
+        .btn-success:hover { background-color: #16a34a; }
+        .btn-danger { background-color: var(--danger); }
+        .btn-danger:hover { background-color: #dc2626; }
+        .btn-warning { background-color: var(--warning); }
+        .btn-warning:hover { background-color: #d97706; }
+        .btn-sm { padding: 4px 8px; font-size: 0.8rem; border-radius: 4px; }
+
+        /* Master Admin Bar */
+        .admin-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #f1f5f9;
+            padding: 12px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .lock-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: bold;
+        }
+
+        /* Stats Grid Dashboard */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .stat-card {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-card h3 {
+            margin: 0;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #64748b;
+        }
+
+        .stat-card .value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-top: 5px;
+        }
+        
+        .stat-present { border-left: 4px solid var(--success); color: var(--success); }
+        .stat-absent { border-left: 4px solid var(--danger); color: var(--danger); }
+        .stat-fullday { border-left: 4px solid var(--primary); color: var(--primary); }
+        .stat-halfday { border-left: 4px solid var(--info); color: var(--info); }
+
+        /* Tables layout framework styling */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 10px 12px;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 0.9rem;
+        }
+
+        th { background-color: #f1f5f9; font-weight: 600; position: sticky; top: 0; z-index: 1; }
+
+        .badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            color: white;
+            display: inline-block;
+        }
+        .badge-p { background-color: var(--success); }
+        .badge-a { background-color: var(--danger); }
+        .badge-type { background-color: #64748b; margin-left: 5px; }
+
+        .comment-text {
+            font-style: italic;
+            color: #475569;
+            font-size: 0.9rem;
+            max-width: 200px;
+            word-wrap: break-word;
+        }
+
+        .flex-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .filter-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .admin-action-btns {
+            display: flex;
+            gap: 4px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    
+    <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('submit-tab', this)">Submit Attendance</button>
+        <button class="tab-btn" onclick="switchTab('records-tab', this)">Records & Analytics</button>
+    </div>
+
+    <div id="submit-tab" class="tab-content active">
+        
+        <div class="admin-bar">
+            <div class="lock-status" id="masterLockStatusIndicator">
+                <span style="color: var(--danger);">🔒 Dashboard Locked (View Only Mode)</span>
+            </div>
+            <button id="authBtn" class="btn btn-warning btn-sm" onclick="toggleAdminLock()">Unlock Admin Mode</button>
+        </div>
+
+        <div class="dashboard-grid">
+            
+            <div class="employee-management-box">
+                <h3 style="margin-top:0; margin-bottom:5px; font-size:1.1rem;">Employee Management</h3>
+                <p style="font-size:0.8rem; color:#64748b; margin-bottom:12px;">Add, edit or delete roster names.</p>
+                
+                <div class="form-group" style="background:#f1f5f9; padding: 10px; margin-bottom:10px;">
+                    <label style="font-size:0.85rem; margin-bottom:5px;">Add New Employee</label>
+                    <div class="input-inline-group">
+                        <input type="text" id="newEmployeeInput" placeholder="Name..." style="padding:8px;">
+                        <button type="button" class="btn btn-success btn-sm" onclick="addNewEmployee()" style="height:36px;">Save</button>
+                    </div>
+                </div>
+
+                <label style="font-size:0.85rem; margin-bottom:5px; display:block; margin-top:10px;">Active Roster List</label>
+                <div class="scrollable-roster-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th style="width:100px; text-align:center;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="employeeManagementTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card" style="margin-bottom:0;">
+                <div class="flex-header">
+                    <h2 style="margin:0; font-size:1.4rem;">Mark Your Attendance</h2>
+                    <span id="currentDateDisplay" style="font-weight: bold; color: var(--primary);"></span>
+                </div>
+                
+                <div class="attendance-box">
+                    <form id="individualAttendanceForm">
+                        <div class="form-group">
+                            <label for="employeeSelect">Select Your Name</label>
+                            <select id="employeeSelect" required>
+                                <option value="" disabled selected>Choose your name...</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Attendance Type</label>
+                            <div class="radio-tile-group">
+                                <label class="radio-tile radio-tile-type">
+                                    <input type="radio" name="attendanceType" value="Full Day" checked required>
+                                    <span>Full Day</span>
+                                </label>
+                                <label class="radio-tile radio-tile-type">
+                                    <input type="radio" name="attendanceType" value="Half Day">
+                                    <span>Half Day</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Select Status</label>
+                            <div class="radio-tile-group">
+                                <label class="radio-tile radio-tile-p">
+                                    <input type="radio" name="attendanceStatus" value="Present" required>
+                                    <span>Present</span>
+                                </label>
+                                <label class="radio-tile radio-tile-a">
+                                    <input type="radio" name="attendanceStatus" value="Absent">
+                                    <span>Absent</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn" style="width:100%; margin-top: 5px;">Submit Attendance</button>
+                    </form>
+                </div>
+            </div>
+
+        </div> 
+    </div>
+
+    <div id="records-tab" class="tab-content">
+        <div class="card">
+            <div class="flex-header">
+                <h2>Attendance Logs</h2>
+                <button class="btn btn-success" onclick="exportToExcel()">Export to Excel</button>
+            </div>
+
+            <div class="filter-row">
+                <div>
+                    <label for="filterEmployee">Filter by Employee</label>
+                    <select id="filterEmployee" onchange="filterRecords()">
+                        <option value="">All Employees</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="filterDate">Filter by Specific Date</label>
+                    <input type="date" id="filterDate" onchange="filterRecords()">
+                </div>
+                <div>
+                    <label for="filterMonth">Filter by Month</label>
+                    <input type="month" id="filterMonth" onchange="filterRecords()">
+                </div>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card stat-present">
+                    <h3>Total Present</h3>
+                    <div class="value" id="countPresent">0</div>
+                </div>
+                <div class="stat-card stat-absent">
+                    <h3>Total Absent</h3>
+                    <div class="value" id="countAbsent">0</div>
+                </div>
+                <div class="stat-card stat-fullday">
+                    <h3>Full Day Count</h3>
+                    <div class="value" id="countFull">0</div>
+                </div>
+                <div class="stat-card stat-halfday">
+                    <h3>Half Day Count</h3>
+                    <div class="value" id="countHalf">0</div>
+                </div>
+            </div>
+
+            <table style="margin-top: 15px;">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Employee Name</th>
+                        <th>Attendance Details</th>
+                        <th>Comments</th>
+                        <th id="actionsHeader" style="display: none;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="recordsTableBody">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
+    import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-database.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyA2hCMiv9HW3Pkos9h3WuRigrTn0DRLFJc",
+        authDomain: "leporce-66bfd.firebaseapp.com",
+        databaseURL: "https://leporce-66bfd-default-rtdb.firebaseio.com",
+        projectId: "leporce-66bfd",
+        storageBucket: "leporce-66bfd.firebasestorage.app",
+        messagingSenderId: "226195215653",
+        appId: "1:226195215653:web:5cd4c3c12b2e92a26fb6cc"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    const defaultEmployees = ["Pranjal", "Neha", "Manik", "Prashant", "Nikhil", "Aakash"];
+    const ADMIN_PASSWORD = "admin123";
+    
+    let employees = [];
+    let attendanceRecords = [];
+    let currentTodayStr = new Date().toLocaleDateString('en-CA'); 
+    let isAdminUnlocked = false; 
+
+    document.getElementById('currentDateDisplay').innerText = new Date().toLocaleDateString('en-US', { 
+        weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' 
+    });
+
+    // Sync Employees list down from Realtime Database
+    onValue(ref(db, 'employees'), (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+            employees = data;
+        } else {
+            employees = [...defaultEmployees];
+            set(ref(db, 'employees'), employees);
+        }
+        populateDropdowns();
+        renderEmployeeTable();
+    });
+
+    // Sync Attendance records down from Realtime Database
+    onValue(ref(db, 'attendanceRecords'), (snapshot) => {
+        const data = snapshot.val();
+        attendanceRecords = data ? data : [];
+        if(document.getElementById('records-tab').classList.contains('active')) {
+            renderRecords();
+        }
+    });
+
+    function switchTab(tabId, buttonElement) {
+        document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        
+        document.getElementById(tabId).classList.add('active');
+        buttonElement.classList.add('active');
+
+        if(tabId === 'records-tab') {
+            renderRecords();
+        }
+    }
+
+    function toggleAdminLock() {
+        if (!isAdminUnlocked) {
+            const pass = prompt("Enter HR Admin Password to unlock Editing and Management features:");
+            if (pass === ADMIN_PASSWORD) {
+                isAdminUnlocked = true;
+                document.getElementById('masterLockStatusIndicator').innerHTML = `<span style="color: var(--success);">🔓 Dashboard Unlocked (Admin Mode Active)</span>`;
+                document.getElementById('authBtn').innerText = "Lock Dashboard";
+                document.getElementById('authBtn').className = "btn btn-danger btn-sm";
+                alert("Dashboard Unlocked Successfully! Admin access is now live across all tabs.");
+                renderEmployeeTable();
+                if(document.getElementById('records-tab').classList.contains('active')) renderRecords();
+            } else if (pass !== null) {
+                alert("Incorrect Password! Access Denied.");
+            }
+        } else {
+            isAdminUnlocked = false;
+            document.getElementById('masterLockStatusIndicator').innerHTML = `<span style="color: var(--danger);">🔒 Dashboard Locked (View Only Mode)</span>`;
+            document.getElementById('authBtn').innerText = "Unlock Admin Mode";
+            document.getElementById('authBtn').className = "btn btn-warning btn-sm";
+            renderEmployeeTable();
+            if(document.getElementById('records-tab').classList.contains('active')) renderRecords();
+        }
+    }
+
+    function addNewEmployee() {
+        if (!isAdminUnlocked) {
+            alert("Action Blocked! You must unlock Admin Mode using the password bar above before adding new names.");
+            return;
+        }
+        const inputElement = document.getElementById('newEmployeeInput');
+        const newName = inputElement.value.trim();
+
+        if (!newName) {
+            alert("Please type a valid name before saving.");
+            return;
+        }
+        if (employees.some(emp => emp.toLowerCase() === newName.toLowerCase())) {
+            alert("This employee name already exists!");
+            return;
+        }
+        
+        employees.push(newName);
+        set(ref(db, 'employees'), employees).then(() => {
+            alert(`${newName} successfully added.`);
+            inputElement.value = "";
+        });
+    }
+
+    function editEmployeeName(index) {
+        if (!isAdminUnlocked) {
+            alert("Action Blocked! Dashboard is locked.");
+            return;
+        }
+        const oldName = employees[index];
+        const newName = prompt(`Modify name for employee "${oldName}":`, oldName);
+        if (newName === null) return;
+
+        const cleanedName = newName.trim();
+        if (!cleanedName) {
+            alert("Name cannot be empty.");
+            return;
+        }
+        if (cleanedName.toLowerCase() !== oldName.toLowerCase() && employees.some(emp => emp.toLowerCase() === cleanedName.toLowerCase())) {
+            alert("This employee name already exists in the roster.");
+            return;
+        }
+
+        attendanceRecords.forEach(record => {
+            if (record.name === oldName) record.name = cleanedName;
+        });
+
+        employees[index] = cleanedName;
+        
+        set(ref(db, 'employees'), employees);
+        set(ref(db, 'attendanceRecords'), attendanceRecords).then(() => {
+            alert("Employee name successfully updated across roster and historic logs.");
+        });
+    }
+
+    function deleteEmployeeName(index) {
+        if (!isAdminUnlocked) {
+            alert("Action Blocked! Dashboard is locked.");
+            return;
+        }
+        const targetName = employees[index];
+        if (confirm(`Are you sure you want to delete "${targetName}" from the roster?`)) {
+            employees.splice(index, 1);
+            set(ref(db, 'employees'), employees).then(() => {
+                alert(`"${targetName}" has been removed.`);
+            });
+        }
+    }
+
+    function renderEmployeeTable() {
+        const tbody = document.getElementById('employeeManagementTableBody');
+        tbody.innerHTML = '';
+        employees.forEach((emp, index) => {
+            const tr = document.createElement('tr');
+            let actionsHtml = `<td style="text-align:center; color:#94a3b8; font-size:0.8rem; font-style:italic; padding:6px 12px;">Locked</td>`;
+            if (isAdminUnlocked) {
+                actionsHtml = `
+                    <td style="text-align:center; padding:6px 12px;">
+                        <div class="admin-action-btns" style="justify-content:center;">
+                            <button type="button" class="btn btn-warning btn-sm" style="padding:2px 6px; font-size:0.75rem;" onclick="editEmployeeName(${index})">Edit</button>
+                            <button type="button" class="btn btn-danger btn-sm" style="padding:2px 6px; font-size:0.75rem;" onclick="deleteEmployeeName(${index})">Del</button>
+                        </div>
+                    </td>
+                `;
+            }
+            tr.innerHTML = `<td><strong>${emp}</strong></td>${actionsHtml}`;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function populateDropdowns() {
+        const selectForm = document.getElementById('employeeSelect');
+        const selectFilter = document.getElementById('filterEmployee');
+        const currentSelectedValue = selectForm.value;
+        const currentFilterValue = selectFilter.value;
+
+        selectForm.innerHTML = '<option value="" disabled selected>Choose your name...</option>';
+        selectFilter.innerHTML = '<option value="">All Employees</option>';
+
+        employees.forEach(emp => {
+            let opt1 = document.createElement('option'); opt1.value = emp; opt1.innerText = emp;
+            selectForm.appendChild(opt1);
+            let opt2 = document.createElement('option'); opt2.value = emp; opt2.innerText = emp;
+            selectFilter.appendChild(opt2);
+        });
+
+        if (employees.includes(currentSelectedValue)) selectForm.value = currentSelectedValue;
+        if (employees.includes(currentFilterValue)) selectFilter.value = currentFilterValue;
+    }
+
+    document.getElementById('individualAttendanceForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const selectedEmp = document.getElementById('employeeSelect').value;
+        const selectedType = document.querySelector('input[name="attendanceType"]:checked').value;
+        const selectedStatus = document.querySelector('input[name="attendanceStatus"]:checked').value;
+
+        const existingRecord = attendanceRecords.find(record => record.date === currentTodayStr && record.name === selectedEmp);
+        const savedComment = existingRecord ? (existingRecord.comment || "") : "";
+
+        attendanceRecords = attendanceRecords.filter(record => !(record.date === currentTodayStr && record.name === selectedEmp));
+        attendanceRecords.push({
+            date: currentTodayStr,
+            name: selectedEmp,
+            type: selectedType,
+            status: selectedStatus,
+            comment: savedComment
+        });
+
+        set(ref(db, 'attendanceRecords'), attendanceRecords).then(() => {
+            alert(`Attendance recorded for ${selectedEmp}: ${selectedType} - ${selectedStatus}`);
+            document.getElementById('individualAttendanceForm').reset();
+            document.querySelector('input[name="attendanceType"][value="Full Day"]').checked = true;
+        });
+    });
+
+    function renderRecords() {
+        const tbody = document.getElementById('recordsTableBody');
+        const empFilter = document.getElementById('filterEmployee').value;
+        const monthFilter = document.getElementById('filterMonth').value;
+        const dateFilter = document.getElementById('filterDate').value;
+        const actionsHeader = document.getElementById('actionsHeader');
+
+        actionsHeader.style.display = isAdminUnlocked ? "table-cell" : "none";
+
+        let filtered = [...attendanceRecords];
+        if (empFilter) filtered = filtered.filter(r => r.name === empFilter);
+        if (dateFilter) filtered = filtered.filter(r => r.date === dateFilter);
+        if (monthFilter) filtered = filtered.filter(r => r.date.startsWith(monthFilter));
+
+        let presentWeightTotal = 0, absentCount = 0, fullDayCount = 0, halfDayCount = 0;
+
+        filtered.forEach(r => {
+            if (r.status === 'Present') {
+                presentWeightTotal += (r.type === 'Half Day') ? 0.5 : 1.0;
+            } else if (r.status === 'Absent') {
+                absentCount++;
+            }
+            if (r.type === 'Full Day') fullDayCount++;
+            if (r.type === 'Half Day') halfDayCount++;
+        });
+
+        document.getElementById('countPresent').innerText = Number(presentWeightTotal.toFixed(1));
+        document.getElementById('countAbsent').innerText = absentCount;
+        document.getElementById('countFull').innerText = fullDayCount;
+        document.getElementById('countHalf').innerText = halfDayCount;
+
+        filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
+        tbody.innerHTML = '';
+
+        if (filtered.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="${isAdminUnlocked ? 5 : 4}" style="text-align: center; color: #64748b;">No matching logs found.</td></tr>`;
+            return;
+        }
+
+        filtered.forEach((r) => {
+            const globalIdx = attendanceRecords.findIndex(item => item.date === r.date && item.name === r.name);
+            const tr = document.createElement('tr');
+            const badgeClass = r.status === 'Present' ? 'badge-p' : 'badge-a';
+            const displayComment = r.comment ? r.comment : `<span style="color:#cbd5e1">No comments</span>`;
+            
+            let actionCellsHtml = '', commentButtonHtml = '';
+            if (isAdminUnlocked) {
+                commentButtonHtml = `<button class="btn btn-warning btn-sm" style="margin-left:8px; padding:2px 6px; font-size:0.75rem;" onclick="editComment(${globalIdx})">📝 Edit</button>`;
+                actionCellsHtml = `<td><div class="admin-action-btns"><button class="btn btn-primary btn-sm" onclick="editRow(${globalIdx})">Edit</button><button class="btn btn-danger btn-sm" onclick="deleteRow(${globalIdx})">Delete</button></div></td>`;
+            }
+
+            tr.innerHTML = `
+                <td>${r.date}</td>
+                <td><strong>${r.name}</strong></td>
+                <td><span class="badge ${badgeClass}">${r.status}</span><span class="badge badge-type">${r.type}</span></td>
+                <td><div style="display:flex; align-items:center; justify-content:space-between;"><span class="comment-text">${displayComment}</span>${commentButtonHtml}</div></td>
+                ${actionCellsHtml}
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function editComment(index) {
+        const currentComment = attendanceRecords[index].comment || "";
+        const newComment = prompt(`Edit comment for ${attendanceRecords[index].name} (${attendanceRecords[index].date}):`, currentComment);
+        if (newComment !== null) {
+            attendanceRecords[index].comment = newComment.trim();
+            set(ref(db, 'attendanceRecords'), attendanceRecords);
+        }
+    }
+
+    function editRow(index) {
+        const record = attendanceRecords[index];
+        const newStatus = prompt(`Change Status for ${record.name} on ${record.date}?\nType 'Present' or 'Absent':`, record.status);
+        if (newStatus === 'Present' || newStatus === 'Absent') {
+            const newType = prompt(`Change Type?\nType 'Full Day' or 'Half Day':`, record.type);
+            if (newType === 'Full Day' || newType === 'Half Day') {
+                attendanceRecords[index].status = newStatus;
+                attendanceRecords[index].type = newType;
+                set(ref(db, 'attendanceRecords'), attendanceRecords).then(() => alert("Log modified successfully!"));
+            } else if(newType !== null) {
+                alert("Invalid Type entered!");
+            }
+        } else if(newStatus !== null) {
+            alert("Invalid Status entered!");
+        }
+    }
+
+    function deleteRow(index) {
+        if (confirm(`Are you sure you want to permanently delete the log for ${attendanceRecords[index].name} on ${attendanceRecords[index].date}?`)) {
+            attendanceRecords.splice(index, 1);
+            set(ref(db, 'attendanceRecords'), attendanceRecords);
+        }
+    }
+
+    function filterRecords() {
+        renderRecords();
+    }
+
+    function exportToExcel() {
+        if (attendanceRecords.length === 0) { alert('No data to export.'); return; }
+        const empFilter = document.getElementById('filterEmployee').value;
+        const monthFilter = document.getElementById('filterMonth').value;
+        const dateFilter = document.getElementById('filterDate').value;
+
+        let dataToExport = [...attendanceRecords];
+        if (empFilter) dataToExport = dataToExport.filter(r => r.name === empFilter);
+        if (dateFilter) dataToExport = dataToExport.filter(r => r.date === dateFilter);
+        if (monthFilter) dataToExport = dataToExport.filter(r => r.date.startsWith(monthFilter));
+
+        const formattedData = dataToExport.map(r => ({
+            "Date": r.date, "Employee Name": r.name, "Day Type": r.type, "Attendance Status": r.status, "HR Comments": r.comment || ""
+        }));
+
+        const worksheet = XLSX.utils.json_to_sheet(formattedData);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Filtered Report");
+        XLSX.writeFile(workbook, `Filtered_Attendance_Report_${currentTodayStr}.xlsx`);
+    }
+
+    // Bind modules scoping context to window global namespace for older inline template attributes
+    window.switchTab = switchTab;
+    window.toggleAdminLock = toggleAdminLock;
+    window.addNewEmployee = addNewEmployee;
+    window.editEmployeeName = editEmployeeName;
+    window.deleteEmployeeName = deleteEmployeeName;
+    window.editComment = editComment;
+    window.editRow = editRow;
+    window.deleteRow = deleteRow;
+    window.filterRecords = filterRecords;
+    window.exportToExcel = exportToExcel;
+</script>
+
+</body>
+</html>
