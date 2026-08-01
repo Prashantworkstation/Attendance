@@ -387,6 +387,14 @@
                         </div>
 
                         <div class="form-group">
+                            <label for="attendanceDateInput">Attendance Date</label>
+                            <input type="date" id="attendanceDateInput" required>
+                            <div style="font-size:0.78rem; color:#64748b; margin-top:6px;">
+                                Defaults to today. Pick an earlier date to log a missed day.
+                            </div>
+                        </div>
+
+                        <div class="form-group">
                             <label>Attendance Type</label>
                             <div class="radio-tile-group">
                                 <label class="radio-tile radio-tile-type">
@@ -511,6 +519,11 @@
     document.getElementById('currentDateDisplay').innerText = new Date().toLocaleDateString('en-US', { 
         weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' 
     });
+
+    // Default the attendance-entry date to today, and don't allow future dates
+    const attendanceDateInput = document.getElementById('attendanceDateInput');
+    attendanceDateInput.value = currentTodayStr;
+    attendanceDateInput.max = currentTodayStr;
 
     // Sync Employees list down from Realtime Database
     onValue(ref(db, 'employees'), (snapshot) => {
@@ -683,15 +696,26 @@
     document.getElementById('individualAttendanceForm').addEventListener('submit', function(e) {
         e.preventDefault();
         const selectedEmp = document.getElementById('employeeSelect').value;
+        const selectedDate = document.getElementById('attendanceDateInput').value;
         const selectedType = document.querySelector('input[name="attendanceType"]:checked').value;
         const selectedStatus = document.querySelector('input[name="attendanceStatus"]:checked').value;
 
-        const existingRecord = attendanceRecords.find(record => record.date === currentTodayStr && record.name === selectedEmp);
-        const savedComment = existingRecord ? (existingRecord.comment || "") : "";
+        if (!selectedDate) {
+            alert("Please choose a date for this attendance entry.");
+            return;
+        }
+        if (selectedDate > currentTodayStr) {
+            alert("You can't submit attendance for a future date.");
+            return;
+        }
 
-        attendanceRecords = attendanceRecords.filter(record => !(record.date === currentTodayStr && record.name === selectedEmp));
+        const existingRecord = attendanceRecords.find(record => record.date === selectedDate && record.name === selectedEmp);
+        const savedComment = existingRecord ? (existingRecord.comment || "") : "";
+        const isBackfill = selectedDate !== currentTodayStr;
+
+        attendanceRecords = attendanceRecords.filter(record => !(record.date === selectedDate && record.name === selectedEmp));
         attendanceRecords.push({
-            date: currentTodayStr,
+            date: selectedDate,
             name: selectedEmp,
             type: selectedType,
             status: selectedStatus,
@@ -699,9 +723,10 @@
         });
 
         set(ref(db, 'attendanceRecords'), attendanceRecords).then(() => {
-            alert(`Attendance recorded for ${selectedEmp}: ${selectedType} - ${selectedStatus}`);
+            alert(`Attendance recorded for ${selectedEmp} on ${selectedDate}${isBackfill ? ' (missed day logged)' : ''}: ${selectedType} - ${selectedStatus}`);
             document.getElementById('individualAttendanceForm').reset();
             document.querySelector('input[name="attendanceType"][value="Full Day"]').checked = true;
+            document.getElementById('attendanceDateInput').value = currentTodayStr;
         });
     });
 
